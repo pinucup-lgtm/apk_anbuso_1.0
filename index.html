@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Analisis Butir Soal - Mode Spreadsheet</title>
+  <title>Aplikasi Anbuso Biologi (Cetak, PDF & Word)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Library Export PDF & HTML Convert -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --excel-green: #107c41;
-      --excel-dark-green: #0b592e;
       --excel-bg: #f3f2f1;
       --excel-border: #d0d0d0;
     }
@@ -23,7 +24,6 @@
       margin: 0;
       overflow: hidden;
     }
-    /* Ribbons / Toolbar Top */
     .excel-header {
       background-color: var(--excel-green);
       color: white;
@@ -37,16 +37,15 @@
       border-bottom: 1px solid var(--excel-border);
       padding: 6px 16px;
       display: flex;
-      gap: 15px;
+      gap: 12px;
       align-items: center;
+      flex-wrap: wrap;
     }
-    /* Main Workbook Container */
     .workbook-body {
       flex: 1;
       overflow: auto;
       padding: 12px;
     }
-    /* Sheet Tab Bar at Bottom */
     .sheet-tabs-bar {
       background-color: #e6e6e6;
       border-top: 1px solid var(--excel-border);
@@ -74,7 +73,6 @@
       font-weight: bold;
       border-top: 3px solid var(--excel-green);
     }
-    /* Table Styling Like Excel Grid */
     .excel-table {
       width: 100%;
       border-collapse: collapse;
@@ -91,14 +89,14 @@
       border: 1px solid var(--excel-border);
       padding: 4px 6px;
     }
-    .excel-table input {
+    .excel-table input, .excel-table select {
       border: none;
       outline: none;
       width: 100%;
       background: transparent;
       font-size: 13px;
     }
-    .excel-table input:focus {
+    .excel-table input:focus, .excel-table select:focus {
       background-color: #e8f0fe;
     }
     .status-badge {
@@ -109,68 +107,193 @@
     }
     .bg-tuntas { background-color: #d4edda; color: #155724; }
     .bg-remed { background-color: #f8d7da; color: #721c24; }
+    .btn-delete-row {
+      color: #dc3545;
+      cursor: pointer;
+      font-weight: bold;
+      text-align: center;
+    }
+    .btn-delete-row:hover {
+      background-color: #f8d7da;
+    }
+    /* Styling khusus saat cetak langsung */
+    @media print {
+      body {
+        overflow: visible !important;
+        height: auto !important;
+        background-color: white !important;
+      }
+      .excel-header, .excel-toolbar, .sheet-tabs-bar, .btn-no-print {
+        display: none !important;
+      }
+      .workbook-body {
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      .sheet-content {
+        display: block !important;
+      }
+      .excel-table {
+        border: 1px solid #000 !important;
+      }
+      .excel-table th, .excel-table td {
+        border: 1px solid #000 !important;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Top Ribbon Header -->
+  <!-- Top Header -->
   <div class="excel-header">
     <div class="d-flex align-items-center gap-2">
-      <span class="fw-bold fs-6">📊 Aplikasi Analisis Butir Soal UTS Biologi</span>
+      <span class="fw-bold fs-6">📊 Aplikasi Anbuso Biologi</span>
     </div>
-    <button class="btn btn-sm btn-light text-success fw-bold" onclick="prosesDataAnalisis()">▶ Hitung & Analisis</button>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-light text-success fw-bold" onclick="prosesDataAnalisis()">▶ Hitung & Analisis</button>
+      <div class="dropdown">
+        <button class="btn btn-sm btn-warning dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+          🖨️ Cetak / Ekspor Laporan
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#" onclick="cetakHalaman()">🖨️ Cetak Langsung / Print (Ctrl+P)</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#" onclick="eksporPDF()">📄 Ekspor Active Sheet ke PDF</a></li>
+          <li><a class="dropdown-item" href="#" onclick="eksporWord()">📝 Ekspor Active Sheet ke Word (.doc)</a></li>
+        </ul>
+      </div>
+    </div>
   </div>
 
-  <!-- Excel Quick Controls -->
+  <!-- Top Toolbar / Pengaturan KKM & Bobot -->
   <div class="excel-toolbar">
     <div><strong>KKM:</strong> <input type="number" id="kkm" value="75" style="width: 50px;" class="border rounded px-1"></div>
     <div class="vr"></div>
-    <div class="flex-grow-1">
+    <div class="d-flex align-items-center gap-1">
+      <strong>Bobot PG (%):</strong> 
+      <input type="number" id="bobotPG" value="40" style="width: 55px;" class="border rounded px-1">
+    </div>
+    <div class="d-flex align-items-center gap-1">
+      <strong>Bobot Singkat (%):</strong> 
+      <input type="number" id="bobotSingkat" value="30" style="width: 55px;" class="border rounded px-1">
+    </div>
+    <div class="d-flex align-items-center gap-1">
+      <strong>Bobot Essay (%):</strong> 
+      <input type="number" id="bobotEssay" value="30" style="width: 55px;" class="border rounded px-1">
+    </div>
+    <div class="vr"></div>
+    <div class="flex-grow-1 d-flex align-items-center gap-2">
       <strong>Kunci PG:</strong> 
-      <input type="text" id="kunciPG" value="A,B,C,D,E,A,B,C,D,E" class="border rounded px-2 w-75" placeholder="Contoh: A,B,C,D,E...">
+      <input type="text" id="kunciPG" value="A,B,C,D,E,A,B,C,D,E" class="border rounded px-2 flex-grow-1" placeholder="A,B,C,D,E...">
     </div>
   </div>
 
-  <!-- Workbook Body Area (Displays Current Sheet Content) -->
-  <div class="workbook-body">
+  <!-- Main Workbook Area -->
+  <div class="workbook-body" id="printable-area">
 
-    <!-- SHEET 1: INPUT DATA -->
-    <div id="sheet-input" class="sheet-content">
-      <div class="d-flex justify-content-between mb-2">
-        <h6 class="fw-bold text-secondary">Sheet 1: Form Input Data Hasil Tes</h6>
-        <button class="btn btn-sm btn-outline-secondary" onclick="tambahBaris()">+ Tambah Baris Siswa</button>
+    <!-- SHEET 1: MAPPER TP & INDIKATOR -->
+    <div id="sheet-tp" class="sheet-content">
+      <div class="d-flex justify-content-between mb-2 btn-no-print">
+        <h6 class="fw-bold text-secondary">Sheet 1: Pemetaan TP & Indikator (PG, Uraian Singkat, Essay)</h6>
+        <button class="btn btn-sm btn-outline-secondary" onclick="tambahBarisTP()">+ Tambah Butir Soal</button>
+      </div>
+      <table class="excel-table" id="tableTP">
+        <thead>
+          <tr>
+            <th width="40" class="btn-no-print">Aksi</th>
+            <th width="120">Tipe Soal</th>
+            <th width="60">No</th>
+            <th width="300">Tujuan Pembelajaran (TP)</th>
+            <th>Indikator Butir Soal</th>
+            <th width="100">Skor Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="btn-delete-row btn-no-print" title="Hapus Butir" onclick="hapusBarisTP(this)">✕</td>
+            <td>
+              <select class="tipe-soal">
+                <option value="PG" selected>Pilihan Ganda</option>
+                <option value="Uraian Singkat">Uraian Singkat</option>
+                <option value="Essay">Essay</option>
+              </select>
+            </td>
+            <td align="center" class="no-urut">1</td>
+            <td><input type="text" class="tp-soal" value="Menganalisis struktur sel dan fungsinya"></td>
+            <td><input type="text" class="ind-soal" value="Mengidentifikasi organel penyimpan genetik"></td>
+            <td><input type="number" class="skor-max" value="1"></td>
+          </tr>
+          <tr>
+            <td class="btn-delete-row btn-no-print" title="Hapus Butir" onclick="hapusBarisTP(this)">✕</td>
+            <td>
+              <select class="tipe-soal">
+                <option value="PG">Pilihan Ganda</option>
+                <option value="Uraian Singkat" selected>Uraian Singkat</option>
+                <option value="Essay">Essay</option>
+              </select>
+            </td>
+            <td align="center" class="no-urut">1</td>
+            <td><input type="text" class="tp-soal" value="Menganalisis bioproses transpor membran"></td>
+            <td><input type="text" class="ind-soal" value="Menyebutkan 2 contoh peristiwa osmosis"></td>
+            <td><input type="number" class="skor-max" value="5"></td>
+          </tr>
+          <tr>
+            <td class="btn-delete-row btn-no-print" title="Hapus Butir" onclick="hapusBarisTP(this)">✕</td>
+            <td>
+              <select class="tipe-soal">
+                <option value="PG">Pilihan Ganda</option>
+                <option value="Uraian Singkat">Uraian Singkat</option>
+                <option value="Essay" selected>Essay</option>
+              </select>
+            </td>
+            <td align="center" class="no-urut">1</td>
+            <td><input type="text" class="tp-soal" value="Menganalisis mekanisme sintesis protein"></td>
+            <td><input type="text" class="ind-soal" value="Menjelaskan tahapan transkripsi dan translasi"></td>
+            <td><input type="number" class="skor-max" value="10"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SHEET 2: INPUT DATA SISWA -->
+    <div id="sheet-input" class="sheet-content d-none">
+      <div class="d-flex justify-content-between mb-2 btn-no-print">
+        <h6 class="fw-bold text-secondary">Sheet 2: Form Input Jawaban PG & Skor (Uraian Singkat & Essay)</h6>
+        <button class="btn btn-sm btn-outline-secondary" onclick="tambahBarisSiswa()">+ Tambah Baris Siswa</button>
       </div>
       <table class="excel-table" id="tableInput">
         <thead>
           <tr>
             <th width="40">No</th>
-            <th width="220">Nama Peserta Didik</th>
-            <th>Jawaban PG (Pisahkan dengan koma)</th>
-            <th width="200">Skor Essay (Soal 1, 2, 3...)</th>
+            <th width="200">Nama Peserta Didik</th>
+            <th>Jawaban PG (Koma)</th>
+            <th width="180">Skor Uraian Singkat (Koma)</th>
+            <th width="180">Skor Essay (Koma)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td align="center">1</td>
             <td><input type="text" class="nama-siswa" placeholder="Nama Siswa"></td>
-            <td><input type="text" class="jwb-pg" placeholder="A,B,C,D,E,A,B,C,D,E"></td>
-            <td><input type="text" class="skor-essay" placeholder="10,15,20"></td>
+            <td><input type="text" class="jwb-pg" placeholder="A,B,C,D,E..."></td>
+            <td><input type="text" class="skor-singkat" placeholder="5,5,4..."></td>
+            <td><input type="text" class="skor-essay" placeholder="10,8,9..."></td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- SHEET 2: LAPORAN SISWA -->
+    <!-- SHEET 3: LAPORAN SISWA -->
     <div id="sheet-laporan" class="sheet-content d-none">
-      <h6 class="fw-bold text-secondary mb-2">Sheet 2: Laporan Hasil Tes Peserta Didik</h6>
+      <h6 class="fw-bold text-secondary mb-2">Sheet 3: Rekapitulasi Nilai Akhir Peserta Didik</h6>
       <table class="excel-table text-center" id="tableLaporan">
         <thead>
           <tr>
             <th width="40">No</th>
             <th>Nama Siswa</th>
-            <th>Benar PG</th>
-            <th>Skor PG</th>
-            <th>Skor Essay</th>
+            <th id="th-pg">Skor PG</th>
+            <th id="th-singkat">Skor Uraian Singkat</th>
+            <th id="th-essay">Skor Essay</th>
             <th>Nilai Akhir</th>
             <th>Ketuntasan</th>
           </tr>
@@ -179,16 +302,18 @@
       </table>
     </div>
 
-    <!-- SHEET 3: ANALISIS BUTIR PG -->
-    <div id="sheet-analisis-pg" class="sheet-content d-none">
-      <h6 class="fw-bold text-secondary mb-2">Sheet 3: Laporan Analisis Butir Soal Pilihan Ganda</h6>
-      <table class="excel-table text-center" id="tableAnalisisPG">
+    <!-- SHEET 4: ANALISIS BUTIR SOAL -->
+    <div id="sheet-analisis" class="sheet-content d-none">
+      <h6 class="fw-bold text-secondary mb-2">Sheet 4: Laporan Analisis Butir Soal Keseluruhan</h6>
+      <table class="excel-table text-center" id="tableAnalisis">
         <thead>
           <tr>
-            <th width="70">No Soal</th>
-            <th>Tingkat Kesukaran (P)</th>
-            <th>Daya Beda (D)</th>
-            <th>Pola Sebaran Opsi (A / B / C / D / E)</th>
+            <th width="100">Tipe Soal</th>
+            <th width="60">No</th>
+            <th width="220">Tujuan Pembelajaran (TP)</th>
+            <th>Indikator Soal</th>
+            <th width="100">Tingkat Kesukaran</th>
+            <th width="90">Daya Beda</th>
             <th>Kesimpulan Butir</th>
           </tr>
         </thead>
@@ -196,29 +321,21 @@
       </table>
     </div>
 
-    <!-- SHEET 4: ANALISIS BUTIR ESSAY -->
-    <div id="sheet-analisis-essay" class="sheet-content d-none">
-      <h6 class="fw-bold text-secondary mb-2">Sheet 4: Laporan Analisis Butir Soal Essay</h6>
-      <table class="excel-table text-center" id="tableAnalisisEssay">
-        <thead>
-          <tr>
-            <th width="100">No Soal Essay</th>
-            <th>Tingkat Kesukaran</th>
-            <th>Daya Beda</th>
-            <th>Kesimpulan Butir</th>
-          </tr>
-        </thead>
-        <tbody><!-- Diisi Otomatis --></tbody>
-      </table>
+    <!-- SHEET 5: REMEDIAL PER SISWA -->
+    <div id="sheet-remedial" class="sheet-content d-none">
+      <h6 class="fw-bold text-secondary mb-2">Sheet 5: Laporan Remedial Per Indikator (PG, Uraian Singkat, Essay)</h6>
+      <div id="containerRemedial">
+        <p class="text-muted">Proses data terlebih dahulu di toolbar atas.</p>
+      </div>
     </div>
 
-    <!-- SHEET 5: GRAFIK & KETUNTASAN -->
+    <!-- SHEET 6: GRAFIK -->
     <div id="sheet-grafik" class="sheet-content d-none">
-      <h6 class="fw-bold text-secondary mb-3">Sheet 5: Grafik Distribusi & Proporsi Ketuntasan</h6>
+      <h6 class="fw-bold text-secondary mb-3">Sheet 6: Grafik Ketuntasan Belajar & Distribusi Nilai</h6>
       <div class="row g-3">
         <div class="col-md-6">
           <div class="bg-white p-3 border rounded">
-            <h6 class="text-center fw-bold mb-3">Proporsi Ketuntasan Belajar</h6>
+            <h6 class="text-center fw-bold mb-3">Proporsi Ketuntasan</h6>
             <canvas id="chartKetuntasan" style="max-height: 250px;"></canvas>
           </div>
         </div>
@@ -233,124 +350,243 @@
 
   </div>
 
-  <!-- Excel Bottom Sheet Tabs Bar -->
+  <!-- Sheet Navigation Bar (Bottom) -->
   <div class="sheet-tabs-bar">
-    <div class="sheet-tab active" onclick="switchSheet('sheet-input', this)">📋 Input Data</div>
+    <div class="sheet-tab active" onclick="switchSheet('sheet-tp', this)">🎯 TP & Indikator</div>
+    <div class="sheet-tab" onclick="switchSheet('sheet-input', this)">📋 Input Data</div>
     <div class="sheet-tab" onclick="switchSheet('sheet-laporan', this)">📑 Laporan Siswa</div>
-    <div class="sheet-tab" onclick="switchSheet('sheet-analisis-pg', this)">📊 Analisis PG</div>
-    <div class="sheet-tab" onclick="switchSheet('sheet-analisis-essay', this)">📝 Analisis Essay</div>
-    <div class="sheet-tab" onclick="switchSheet('sheet-grafik', this)">📈 Grafik & Statistik</div>
+    <div class="sheet-tab" onclick="switchSheet('sheet-analisis', this)">📊 Analisis Butir</div>
+    <div class="sheet-tab" onclick="switchSheet('sheet-remedial', this)">🩹 Remedial Siswa</div>
+    <div class="sheet-tab" onclick="switchSheet('sheet-grafik', this)">📈 Grafik</div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Navigasi Antar Tab Sheet Excel
+    let activeSheetId = 'sheet-tp';
+
     function switchSheet(sheetId, tabElement) {
+      activeSheetId = sheetId;
       document.querySelectorAll('.sheet-content').forEach(el => el.classList.add('d-none'));
       document.querySelectorAll('.sheet-tab').forEach(el => el.classList.remove('active'));
-      
       document.getElementById(sheetId).classList.remove('d-none');
       tabElement.classList.add('active');
     }
 
-    // Tambah Baris Input Data
-    function tambahBaris() {
+    function tambahBarisTP() {
+      let tbody = document.querySelector("#tableTP tbody");
+      let tr = `<tr>
+        <td class="btn-delete-row btn-no-print" title="Hapus Butir" onclick="hapusBarisTP(this)">✕</td>
+        <td>
+          <select class="tipe-soal">
+            <option value="PG">Pilihan Ganda</option>
+            <option value="Uraian Singkat">Uraian Singkat</option>
+            <option value="Essay">Essay</option>
+          </select>
+        </td>
+        <td align="center" class="no-urut">1</td>
+        <td><input type="text" class="tp-soal" placeholder="Tujuan Pembelajaran"></td>
+        <td><input type="text" class="ind-soal" placeholder="Indikator Soal"></td>
+        <td><input type="number" class="skor-max" value="10"></td>
+      </tr>`;
+      tbody.insertAdjacentHTML('beforeend', tr);
+      renumberTP();
+    }
+
+    function hapusBarisTP(btn) {
+      let tbody = document.querySelector("#tableTP tbody");
+      if (tbody.children.length <= 1) {
+        alert("Minimal harus terdapat 1 butir soal!");
+        return;
+      }
+      btn.closest('tr').remove();
+      renumberTP();
+    }
+
+    function renumberTP() {
+      document.querySelectorAll("#tableTP tbody tr").forEach((tr, idx) => {
+        let noCell = tr.querySelector(".no-urut");
+        if (noCell) noCell.innerText = idx + 1;
+      });
+    }
+
+    function tambahBarisSiswa() {
       let tbody = document.querySelector("#tableInput tbody");
       let no = tbody.children.length + 1;
       let tr = `<tr>
         <td align="center">${no}</td>
         <td><input type="text" class="nama-siswa" placeholder="Nama Siswa"></td>
         <td><input type="text" class="jwb-pg" placeholder="A,B,C,D..."></td>
-        <td><input type="text" class="skor-essay" placeholder="10,15,20"></td>
+        <td><input type="text" class="skor-singkat" placeholder="5,4,5"></td>
+        <td><input type="text" class="skor-essay" placeholder="10,8,9"></td>
       </tr>`;
       tbody.insertAdjacentHTML('beforeend', tr);
     }
 
-    // Kalkulasi Data dan Analisis
     function prosesDataAnalisis() {
       const kkm = parseFloat(document.getElementById('kkm').value) || 75;
+      const bPG = (parseFloat(document.getElementById('bobotPG').value) || 0) / 100;
+      const bSingkat = (parseFloat(document.getElementById('bobotSingkat').value) || 0) / 100;
+      const bEssay = (parseFloat(document.getElementById('bobotEssay').value) || 0) / 100;
+
+      let totalBobot = Math.round((bPG + bSingkat + bEssay) * 100);
+      if (totalBobot !== 100) {
+        alert(`Peringatan: Total persentase bobot saat ini adalah ${totalBobot}%. Disarankan agar total bernilai 100%.`);
+      }
+
+      document.getElementById('th-pg').innerText = `Skor PG (${(bPG * 100)}%)`;
+      document.getElementById('th-singkat').innerText = `Skor Singkat (${(bSingkat * 100)}%)`;
+      document.getElementById('th-essay').innerText = `Skor Essay (${(bEssay * 100)}%)`;
+
       const kunciPG = document.getElementById('kunciPG').value.toUpperCase().split(',').map(s => s.trim());
 
+      const tipeEl = document.querySelectorAll('.tipe-soal');
+      const tpEl = document.querySelectorAll('.tp-soal');
+      const indEl = document.querySelectorAll('.ind-soal');
+      const maxEl = document.querySelectorAll('.skor-max');
+
+      let mapTP = [];
+      tpEl.forEach((el, i) => {
+        mapTP.push({
+          tipe: tipeEl[i].value,
+          tp: el.value || "-",
+          ind: indEl[i] ? indEl[i].value : "-",
+          max: parseFloat(maxEl[i].value) || 1
+        });
+      });
+
+      let maxSkorSingkat = 0, maxSkorEssay = 0;
+      mapTP.forEach(item => {
+        if (item.tipe === "Uraian Singkat") maxSkorSingkat += item.max;
+        if (item.tipe === "Essay") maxSkorEssay += item.max;
+      });
+
       const namaEl = document.querySelectorAll('.nama-siswa');
-      const jwbEl = document.querySelectorAll('.jwb-pg');
-      const essayEl = document.querySelectorAll('.skor-essay');
+      const jwbPGElements = document.querySelectorAll('.jwb-pg');
+      const skorSingkatElements = document.querySelectorAll('.skor-singkat');
+      const skorEssayElements = document.querySelectorAll('.skor-essay');
 
       let dataSiswa = [];
       namaEl.forEach((el, i) => {
         if(el.value.trim() !== "") {
           dataSiswa.push({
             nama: el.value.trim(),
-            jwbPG: jwbEl[i].value.toUpperCase().split(',').map(s => s.trim()),
-            skorEssay: essayEl[i].value.split(',').map(s => parseFloat(s) || 0)
+            jwbPG: jwbPGElements[i].value.toUpperCase().split(',').map(s => s.trim()),
+            skorSingkat: skorSingkatElements[i].value.split(',').map(s => parseFloat(s) || 0),
+            skorEssay: skorEssayElements[i].value.split(',').map(s => parseFloat(s) || 0)
           });
         }
       });
 
       if(dataSiswa.length === 0) {
-        alert("Isi data siswa pada Sheet Input Data terlebih dahulu!");
+        alert("Isi data siswa terlebih dahulu pada Sheet Input Data!");
         return;
       }
 
-      // 1. Olah Laporan Hasil Siswa
+      // 1. Rekapitulasi Laporan Siswa
       let tuntas = 0, tidakTuntas = 0, listNilai = [], htmlLaporan = "";
       dataSiswa.forEach((siswa, index) => {
         let benarPG = 0;
-        siswa.jwbPG.forEach((jwb, idx) => {
-          if(jwb === kunciPG[idx]) benarPG++;
-        });
+        siswa.jwbPG.forEach((jwb, idx) => { if(jwb === kunciPG[idx]) benarPG++; });
+        let nilaiPG = kunciPG.length > 0 ? (benarPG / kunciPG.length) * (bPG * 100) : 0;
 
-        let skorPG = (benarPG / kunciPG.length) * 50; // Bobot PG 50%
-        let totalEssay = siswa.skorEssay.reduce((a, b) => a + b, 0);
-        let nilaiAkhir = Math.round(skorPG + (totalEssay * 0.5));
+        let totSingkat = siswa.skorSingkat.reduce((a, b) => a + b, 0);
+        let nilaiSingkat = maxSkorSingkat > 0 ? (totSingkat / maxSkorSingkat) * (bSingkat * 100) : 0;
 
+        let totEssay = siswa.skorEssay.reduce((a, b) => a + b, 0);
+        let nilaiEssay = maxSkorEssay > 0 ? (totEssay / maxSkorEssay) * (bEssay * 100) : 0;
+
+        let nilaiAkhir = Math.round(nilaiPG + nilaiSingkat + nilaiEssay);
         listNilai.push(nilaiAkhir);
+
         let isTuntas = nilaiAkhir >= kkm;
         if(isTuntas) tuntas++; else tidakTuntas++;
 
         htmlLaporan += `<tr>
           <td>${index + 1}</td>
           <td align="left">${siswa.nama}</td>
-          <td>${benarPG} / ${kunciPG.length}</td>
-          <td>${skorPG.toFixed(1)}</td>
-          <td>${totalEssay}</td>
+          <td>${nilaiPG.toFixed(1)}</td>
+          <td>${totSingkat} (${nilaiSingkat.toFixed(1)})</td>
+          <td>${totEssay} (${nilaiEssay.toFixed(1)})</td>
           <td class="fw-bold">${nilaiAkhir}</td>
           <td><span class="status-badge ${isTuntas ? 'bg-tuntas' : 'bg-remed'}">${isTuntas ? 'TUNTAS' : 'REMEDIAL'}</span></td>
         </tr>`;
       });
       document.querySelector("#tableLaporan tbody").innerHTML = htmlLaporan;
 
-      // 2. Analisis Butir PG
-      let htmlPG = "";
-      kunciPG.forEach((kunci, i) => {
-        let count = {A:0, B:0, C:0, D:0, E:0}, benar = 0;
-        dataSiswa.forEach(s => {
-          let ans = s.jwbPG[i];
-          if(count[ans] !== undefined) count[ans]++;
-          if(ans === kunci) benar++;
-        });
-
+      // 2. Analisis Butir Soal Keseluruhan
+      let htmlAnalisis = "";
+      mapTP.forEach((item, i) => {
+        let P = 0, D = 0;
         let N = dataSiswa.length;
-        let P = (benar / N).toFixed(2);
-        let tk = P > 0.7 ? "Mudah" : (P >= 0.3 ? "Sedang" : "Sukar");
-        let D = (P * 0.75).toFixed(2); // Indeks Daya Beda
-        let dist = `A: ${Math.round(count.A/N*100)}% | B: ${Math.round(count.B/N*100)}% | C: ${Math.round(count.C/N*100)}% | D: ${Math.round(count.D/N*100)}% | E: ${Math.round(count.E/N*100)}%`;
 
-        htmlPG += `<tr>
-          <td>Soal ${i + 1}</td>
+        if (item.tipe === "PG") {
+          let benar = 0;
+          dataSiswa.forEach(s => { if(s.jwbPG[i] === kunciPG[i]) benar++; });
+          P = (benar / N).toFixed(2);
+        } else if (item.tipe === "Uraian Singkat") {
+          let totSkor = 0;
+          dataSiswa.forEach(s => { totSkor += (s.skorSingkat[i] || 0); });
+          P = (totSkor / (N * item.max)).toFixed(2);
+        } else {
+          let totSkor = 0;
+          dataSiswa.forEach(s => { totSkor += (s.skorEssay[i] || 0); });
+          P = (totSkor / (N * item.max)).toFixed(2);
+        }
+
+        let tk = P > 0.7 ? "Mudah" : (P >= 0.3 ? "Sedang" : "Sukar");
+        D = (P * 0.75).toFixed(2);
+
+        htmlAnalisis += `<tr>
+          <td><span class="badge bg-secondary">${item.tipe}</span></td>
+          <td>${i + 1}</td>
+          <td align="left"><small>${item.tp}</small></td>
+          <td align="left"><small>${item.ind}</small></td>
           <td>${P} (${tk})</td>
           <td>${D}</td>
-          <td><small>${dist}</small></td>
           <td><span class="status-badge ${D >= 0.2 ? 'bg-tuntas' : 'bg-remed'}">${D >= 0.2 ? 'Diterima' : 'Revisi'}</span></td>
         </tr>`;
       });
-      document.querySelector("#tableAnalisisPG tbody").innerHTML = htmlPG;
+      document.querySelector("#tableAnalisis tbody").innerHTML = htmlAnalisis;
 
-      // 3. Render Grafik
+      // 3. Rekomendasi Remedial
+      let htmlRemedial = "";
+      dataSiswa.forEach(siswa => {
+        let rekomendasi = [];
+        siswa.jwbPG.forEach((jwb, i) => {
+          if(jwb !== kunciPG[i] && mapTP[i]) {
+            rekomendasi.push(`[PG] Soal No ${i+1}: ${mapTP[i].tp} (Indikator: ${mapTP[i].ind})`);
+          }
+        });
+        mapTP.forEach((item, i) => {
+          if(item.tipe === "Uraian Singkat" && (siswa.skorSingkat[i] || 0) < (item.max * 0.75)) {
+            rekomendasi.push(`[Uraian Singkat] ${item.tp} (Indikator: ${item.ind})`);
+          } else if(item.tipe === "Essay" && (siswa.skorEssay[i] || 0) < (item.max * 0.75)) {
+            rekomendasi.push(`[Essay] ${item.tp} (Indikator: ${item.ind})`);
+          }
+        });
+
+        if(rekomendasi.length > 0) {
+          htmlRemedial += `<div class="card p-3 mb-2 border">
+            <h6 class="fw-bold text-danger mb-1">👤 ${siswa.nama}</h6>
+            <p class="mb-1"><strong>Perlu Pengayaan / Remedial pada Indikator:</strong></p>
+            <ul class="mb-0 ps-3 text-secondary">
+              ${rekomendasi.map(r => `<li>${r}</li>`).join('')}
+            </ul>
+          </div>`;
+        } else {
+          htmlRemedial += `<div class="card p-3 mb-2 border border-success">
+            <h6 class="fw-bold text-success mb-0">👤 ${siswa.nama} - Tuntas pada Seluruh Indikator Soal</h6>
+          </div>`;
+        }
+      });
+      document.getElementById('containerRemedial').innerHTML = htmlRemedial;
+
+      // 4. Render Chart
       renderChart(tuntas, tidakTuntas, listNilai);
 
-      alert("Analisis berhasil diperbarui! Silakan klik tab Sheet di bawah untuk melihat hasil.");
+      alert("Analisis berhasil diperbarui!");
     }
 
-    // Render Charts
     let c1, c2;
     function renderChart(tuntas, remed, nilai) {
       if(c1) c1.destroy();
@@ -368,9 +604,46 @@
         type: 'bar',
         data: {
           labels: nilai.map((_, i) => `S${i+1}`),
-          datasets: [{ label: 'Nilai Siswa', data: nilai, backgroundColor: '#107c41' }]
+          datasets: [{ label: 'Nilai Akhir Siswa', data: nilai, backgroundColor: '#107c41' }]
         }
       });
+    }
+
+    // FUNGSI EKSPOR & CETAK LAPORAN
+    function cetakHalaman() {
+      window.print();
+    }
+
+    function eksporPDF() {
+      const element = document.getElementById(activeSheetId);
+      const opt = {
+        margin:       10,
+        filename:     `Laporan_Anbuso_${activeSheetId}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function eksporWord() {
+      const content = document.getElementById(activeSheetId).innerHTML;
+      const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+            "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+            "xmlns='http://www.w3.org/TR/REC-html40'>"+
+            "<head><meta charset='utf-8'><title>Laporan Anbuso</title>"+
+            "<style>table {border-collapse: collapse; width: 100%;} th, td {border: 1px solid black; padding: 5px;}</style>"+
+            "</head><body>";
+      const footer = "</body></html>";
+      const sourceHTML = header + content + footer;
+
+      const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+      const fileDownload = document.createElement("a");
+      document.body.appendChild(fileDownload);
+      fileDownload.href = source;
+      fileDownload.download = `Laporan_Anbuso_${activeSheetId}.doc`;
+      fileDownload.click();
+      document.body.removeChild(fileDownload);
     }
   </script>
 </body>
