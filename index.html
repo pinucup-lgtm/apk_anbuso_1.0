@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+# Let's write out the complete, updated HTML code for the user since their previous turn got cut off at the end.
+# We will ensure that the Excel multi-sheet export, PDF export of all menus, Word export of all menus, 
+# and clean input fields are fully integrated.
+complete_code = """<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -148,9 +151,15 @@
       body { overflow: visible !important; height: auto !important; background-color: white !important; }
       .excel-header, .excel-toolbar, .sheet-tabs-bar, .btn-no-print { display: none !important; }
       .workbook-body { padding: 0 !important; overflow: visible !important; }
-      .sheet-content { display: block !important; }
-      .excel-table { border: 1px solid #000 !important; table-layout: auto !important; }
+      .sheet-content { display: block !important; margin-bottom: 30px; page-break-after: always; }
+      .excel-table { border: 1px solid #000 !important; table-layout: auto !important; width: 100% !important; }
       .excel-table th, .excel-table td { border: 1px solid #000 !important; }
+      .excel-table input, .excel-table select {
+        border: none !important;
+        background: transparent !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+      }
     }
   </style>
 </head>
@@ -172,9 +181,9 @@
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item fw-bold text-success" href="#" onclick="eksporSeluruhExcel()">🟢 Ekspor SELURUH Menu ke Excel (.xlsx)</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" href="#" onclick="cetakHalaman()">🖨️ Cetak Langsung / Print (Ctrl+P)</a></li>
-          <li><a class="dropdown-item" href="#" onclick="eksporPDF()">📄 Ekspor Active Sheet ke PDF</a></li>
-          <li><a class="dropdown-item" href="#" onclick="eksporWord()">📝 Ekspor Active Sheet ke Word (.doc)</a></li>
+          <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="cetakHalaman()">🖨️ Cetak SELURUH Menu / Print (Ctrl+P)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="eksporPDF()">📄 Ekspor SELURUH Menu ke PDF</a></li>
+          <li><a class="dropdown-item" href="#" onclick="eksporWord()">📝 Ekspor SELURUH Menu ke Word (.doc)</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" href="#" onclick="resetSemuaData()">🗑️ Reset / Hapus Data Aplikasi</a></li>
         </ul>
@@ -198,11 +207,11 @@
     </div>
     <div class="d-flex align-items-center gap-1">
       <strong>Nama Sekolah:</strong> 
-      <input type="text" id="namaSekolah" value="SMA Negeri 1" style="width: 150px;" class="border rounded px-2 bg-white">
+      <input type="text" id="namaSekolah" value="MA Riyadlus Sholihin" style="width: 170px;" class="border rounded px-2 bg-white">
     </div>
     <div class="d-flex align-items-center gap-1">
       <strong>Guru Pengampu:</strong> 
-      <input type="text" id="namaGuru" value="Guru Biologi, S.Pd." style="width: 150px;" class="border rounded px-2 bg-white">
+      <input type="text" id="namaGuru" value="M. Yusuf I'thisom, S.Pd." style="width: 170px;" class="border rounded px-2 bg-white">
     </div>
   </div>
 
@@ -387,10 +396,9 @@
 
     document.addEventListener("DOMContentLoaded", function() {
       makeTablesResizable();
-      muatDariLocalStorage(); // Muat data tersimpan otomatis saat aplikasi dibuka
+      muatDariLocalStorage();
     });
 
-    // Fungsi Sinkronisasi ke Google Sheets
     function kirimKeGoogleSheets() {
       const dataAplikasi = {
         identitas: {
@@ -417,21 +425,16 @@
       fetch(urlAppsScript, {
         method: "POST",
         mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataAplikasi)
       })
-      .then(() => {
-        alert("✓ Data berhasil dikirim ke Google Sheets!");
-      })
+      .then(() => { alert("✓ Data berhasil dikirim ke Google Sheets!"); })
       .catch(error => {
         console.error("Error:", error);
         alert("❌ Gagal mengirim data ke Google Sheets.");
       });
     }
 
-    // Fitur Resizable Column Dragging
     function makeTablesResizable() {
       document.querySelectorAll('.excel-table').forEach(table => {
         const cols = table.querySelectorAll('th');
@@ -526,9 +529,6 @@
       tbody.insertAdjacentHTML('beforeend', tr);
     }
 
-    // ==========================================
-    // LOGIKA PENYIMPANAN DATA PERMANEN (AUTO-SAVE)
-    // ==========================================
     function simpanKeLocalStorage() {
       const dataAplikasi = {
         identitas: {
@@ -547,7 +547,6 @@
         siswaList: []
       };
 
-      // Simpan data TP
       document.querySelectorAll('#tableTP tbody tr').forEach(tr => {
         dataAplikasi.tpList.push({
           tipe: tr.querySelector('.tipe-soal').value,
@@ -557,7 +556,6 @@
         });
       });
 
-      // Simpan data Siswa
       document.querySelectorAll('#tableInput tbody tr').forEach(tr => {
         dataAplikasi.siswaList.push({
           nama: tr.querySelector('.nama-siswa').value,
@@ -577,7 +575,6 @@
 
       const data = JSON.parse(savedData);
 
-      // Restore Identitas
       if(data.identitas) {
         document.getElementById('namaKelas').value = data.identitas.kelas || '';
         document.getElementById('namaMapel').value = data.identitas.mapel || '';
@@ -591,7 +588,6 @@
         document.getElementById('kunciPG').value = data.identitas.kunciPG || '';
       }
 
-      // Restore TP
       if(data.tpList && data.tpList.length > 0) {
         let tbodyTP = document.querySelector("#tableTP tbody");
         tbodyTP.innerHTML = "";
@@ -614,7 +610,6 @@
         });
       }
 
-      // Restore Siswa
       if(data.siswaList && data.siswaList.length > 0) {
         let tbodyInput = document.querySelector("#tableInput tbody");
         tbodyInput.innerHTML = "";
@@ -638,11 +633,8 @@
       }
     }
 
-    // ==========================================
-    // HITUNG & ANALISIS DATA
-    // ==========================================
     function prosesDataAnalisis() {
-      simpanKeLocalStorage(); // Otomatis simpan saat klik hitung
+      simpanKeLocalStorage();
 
       const kkm = parseFloat(document.getElementById('kkm').value) || 75;
       const bPG = (parseFloat(document.getElementById('bobotPG').value) || 0) / 100;
@@ -826,7 +818,7 @@
       });
     }
 
-    // Ekspor Excel Multi-Sheet
+    // Ekspor Excel Multi-Sheet (SELURUH MENU)
     function eksporSeluruhExcel() {
       const wb = XLSX.utils.book_new();
       const namaKelas = document.getElementById('namaKelas').value || 'Kelas';
@@ -848,17 +840,70 @@
       addSheetFromTable('tableLaporan', 'Laporan Siswa');
       addSheetFromTable('tableAnalisis', 'Analisis Butir');
 
-      XLSX.writeFile(wb, `Anbuso_${namaKelas}.xlsx`);
+      XLSX.writeFile(wb, `Anbuso_Lengkap_${namaKelas}.xlsx`);
     }
 
-    function cetakHalaman() { window.print(); }
+    // Helper: Menyiapkan Kloning Seluruh Menu dengan Format Bersih (Tanpa Kotak Input)
+    function dapatkanHTMLSeluruhMenuBersih() {
+      const container = document.createElement('div');
+      
+      const headerInfo = `
+        <div style="font-family: Arial, sans-serif; margin-bottom: 20px;">
+          <h3 style="text-align: center; font-weight: bold; margin-bottom: 5px;">LAPORAN ANALISIS BUTIR SOAL & HASIL BELAJAR (ANBUSO)</h3>
+          <p style="text-align: center; margin-top: 0; font-size: 14px;"><b>Sekolah:</b> ${document.getElementById('namaSekolah').value} | <b>Kelas:</b> ${document.getElementById('namaKelas').value} | <b>Mapel:</b> ${document.getElementById('namaMapel').value}</p>
+          <hr style="border: 1px solid #000;">
+        </div>
+      `;
+      container.innerHTML = headerInfo;
+
+      const sheets = ['sheet-tp', 'sheet-input', 'sheet-laporan', 'sheet-analisis', 'sheet-remedial'];
+      sheets.forEach(sheetId => {
+        const originalSheet = document.getElementById(sheetId);
+        if (originalSheet) {
+          const clone = originalSheet.cloneNode(true);
+          clone.classList.remove('d-none');
+          
+          clone.querySelectorAll('input').forEach(inp => {
+            const span = document.createElement('span');
+            span.innerText = inp.value;
+            inp.parentNode.replaceChild(span, inp);
+          });
+          
+          clone.querySelectorAll('select').forEach(sel => {
+            const span = document.createElement('span');
+            span.innerText = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : sel.value;
+            sel.parentNode.replaceChild(span, sel);
+          });
+          
+          clone.querySelectorAll('.btn-no-print, .resizer').forEach(el => el.remove());
+          
+          container.appendChild(clone);
+          
+          const pageBreak = document.createElement('div');
+          pageBreak.style.pageBreakAfter = 'always';
+          pageBreak.style.height = '20px';
+          container.appendChild(pageBreak);
+        }
+      });
+
+      return container;
+    }
+
+    function cetakHalaman() {
+      const allSheetsDiv = document.querySelectorAll('.sheet-content');
+      allSheetsDiv.forEach(el => el.classList.remove('d-none'));
+      window.print();
+      allSheetsDiv.forEach(el => {
+        if(el.id !== activeSheetId) el.classList.add('d-none');
+      });
+    }
 
     function eksporPDF() {
-      const element = document.getElementById(activeSheetId);
+      const element = dapatkanHTMLSeluruhMenuBersih();
       const namaKelas = document.getElementById('namaKelas').value || 'Kelas';
       const opt = {
         margin: 10,
-        filename: `Laporan_Anbuso_${namaKelas}_${activeSheetId}.pdf`,
+        filename: `Laporan_Lengkap_Anbuso_${namaKelas}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
@@ -867,25 +912,27 @@
     }
 
     function eksporWord() {
-      const content = document.getElementById(activeSheetId).innerHTML;
+      const element = dapatkanHTMLSeluruhMenuBersih();
       const namaKelas = document.getElementById('namaKelas').value || 'Kelas';
       const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
             "xmlns:w='urn:schemas-microsoft-com:office:word' "+
             "xmlns='http://www.w3.org/TR/REC-html40'>"+
-            "<head><meta charset='utf-8'><title>Laporan Anbuso</title>"+
-            "<style>table {border-collapse: collapse; width: 100%;} th, td {border: 1px solid black; padding: 5px;}</style>"+
+            "<head><meta charset='utf-8'><title>Laporan Lengkap Anbuso</title>"+
+            "<style>table {border-collapse: collapse; width: 100%; margin-bottom: 20px;} th, td {border: 1px solid black; padding: 5px; font-size: 11pt;} th {background-color: #e6e6e6;}</style>"+
             "</head><body>";
       const footer = "</body></html>";
-      const sourceHTML = header + content + footer;
+      const sourceHTML = header + element.innerHTML + footer;
 
       const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
       const fileDownload = document.createElement("a");
       document.body.appendChild(fileDownload);
       fileDownload.href = source;
-      fileDownload.download = `Laporan_Anbuso_${namaKelas}_${activeSheetId}.doc`;
+      fileDownload.download = `Laporan_Lengkap_Anbuso_${namaKelas}.doc`;
       fileDownload.click();
       document.body.removeChild(fileDownload);
     }
   </script>
 </body>
 </html>
+"""
+print("Done")
