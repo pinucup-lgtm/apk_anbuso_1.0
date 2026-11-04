@@ -6,6 +6,47 @@
   <title>Aplikasi Anbuso Biologi (Input Kelas & Auto-Save)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  function kirimKeGoogleSheets() {
+  // Ambil data yang sama seperti saat menyimpan ke localStorage
+  const dataAplikasi = {
+    identitas: {
+      kelas: document.getElementById('namaKelas').value,
+      mapel: document.getElementById('namaMapel').value,
+      semester: document.getElementById('semesterInfo').value,
+      sekolah: document.getElementById('namaSekolah').value,
+      guru: document.getElementById('namaGuru').value
+    },
+    siswaList: []
+  };
+
+  document.querySelectorAll('#tableInput tbody tr').forEach(tr => {
+    dataAplikasi.siswaList.push({
+      nama: tr.querySelector('.nama-siswa').value,
+      jwbPG: tr.querySelector('.jwb-pg').value.split(',').map(s => s.trim()),
+      skorSingkat: tr.querySelector('.skor-singkat').value,
+      skorEssay: tr.querySelector('.skor-essay').value
+    });
+  });
+
+  // URL Web App dari Google Apps Script Anda
+  const urlAppsScript = "GANTI_DENGAN_URL_WEB_APP_ANDA_DISINI";
+
+  fetch(urlAppsScript, {
+    method: "POST",
+    mode: "no-cors", // Diperlukan untuk lintas domain Google Scripts
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(dataAplikasi)
+  })
+  .then(() => {
+    alert("✓ Data berhasil dikirim ke Google Sheets!");
+  })
+  .catch(error => {
+    console.error("Error:", error);
+    alert("❌ Gagal mengirim data ke Google Sheets.");
+  });
+}
   <!-- Library PDF & Excel Multi-Sheet Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -167,6 +208,7 @@
       <div class="dropdown">
         <button class="btn btn-sm btn-warning dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
           🖨️ Ekspor / Opsi
+          <button class="btn btn-sm btn-light text-danger fw-bold" onclick="kirimKeGoogleSheets()">☁️ Sinkron ke Sheets</button>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item fw-bold text-success" href="#" onclick="eksporSeluruhExcel()">🟢 Ekspor SELURUH Menu ke Excel (.xlsx)</a></li>
